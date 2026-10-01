@@ -5,8 +5,8 @@
 #   count_tokens.zip
 #   ├── amd64/
 #   │   ├── main          # linux/amd64 executable, statically linked, no arguments
-#   │   └── models.json   # optional data file, available in the working directory at runtime
-#   └── arm64/
+#   │   └── models.json   # data file, deployed next to the binary (resolve it relative to the
+#   └── arm64/            #   executable - the process does not start in the bundle directory)
 #       ├── main
 #       └── models.json
 #
