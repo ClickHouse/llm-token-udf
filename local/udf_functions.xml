@@ -1,0 +1,53 @@
+<!--
+  Executable UDF definitions for running the examples against open-source ClickHouse,
+  which is how the numbers in the blog post were produced. Point the server at this file:
+
+    <user_scripts_path>/path/to/llm-token-udf/local/user_scripts/</user_scripts_path>
+    <user_defined_executable_functions_config>/path/to/llm-token-udf/local/udf_functions.xml</user_defined_executable_functions_config>
+
+  and populate local/user_scripts/ with:
+    count_tokens_main      the Rust binary for your architecture (see udf/count_tokens_rs/build.sh)
+    models.json            copied from udf/count_tokens_rs/
+    count_tokens.sh        the wrapper in this directory (cd to the script dir so models.json is in cwd)
+    count_tokens_py.py     udf/count_tokens_py/main.py   (needs `pip install tiktoken`)
+    judge_response.py      udf/judge_response/main.py    (needs `pip install requests`; set ANTHROPIC_API_KEY in the server's environment)
+
+  In ClickHouse Cloud none of this is needed - the console/API/Terraform configure the same settings.
+-->
+<functions>
+    <function>
+        <type>executable_pool</type>
+        <name>count_tokens</name>
+        <return_type>UInt32</return_type>
+        <argument><type>String</type><name>model</name></argument>
+        <argument><type>String</type><name>text</name></argument>
+        <format>RowBinary</format>
+        <send_chunk_header>true</send_chunk_header>
+        <pool_size>4</pool_size>
+        <command>count_tokens.sh</command>
+        <deterministic>true</deterministic>
+    </function>
+    <function>
+        <type>executable_pool</type>
+        <name>count_tokens_py</name>
+        <return_type>UInt32</return_type>
+        <argument><type>String</type><name>model</name></argument>
+        <argument><type>String</type><name>text</name></argument>
+        <format>RowBinary</format>
+        <send_chunk_header>true</send_chunk_header>
+        <pool_size>4</pool_size>
+        <command>count_tokens_py.py</command>
+        <deterministic>true</deterministic>
+    </function>
+    <function>
+        <type>executable_pool</type>
+        <name>judge_response</name>
+        <return_type>Tuple(UInt8, String, String)</return_type>
+        <argument><type>String</type><name>prompt</name></argument>
+        <argument><type>String</type><name>completion</name></argument>
+        <format>JSONEachRow</format>
+        <pool_size>4</pool_size>
+        <max_command_execution_time>30</max_command_execution_time>
+        <command>judge_response.py</command>
+    </function>
+</functions>

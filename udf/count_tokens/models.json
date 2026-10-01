@@ -1,0 +1,12 @@
+[
+  {"prefix": "gpt-5",            "encoding": "o200k_base"},
+  {"prefix": "gpt-4.1",          "encoding": "o200k_base"},
+  {"prefix": "gpt-4o",           "encoding": "o200k_base"},
+  {"prefix": "o1",               "encoding": "o200k_base"},
+  {"prefix": "o3",               "encoding": "o200k_base"},
+  {"prefix": "o4",               "encoding": "o200k_base"},
+  {"prefix": "gpt-4",            "encoding": "cl100k_base"},
+  {"prefix": "gpt-3.5",          "encoding": "cl100k_base"},
+  {"prefix": "text-embedding-3", "encoding": "cl100k_base"},
+  {"prefix": "text-embedding-ada", "encoding": "cl100k_base"}
+]

@@ -1,0 +1,10 @@
+# Static, dependency-free binaries for both CPU architectures ClickHouse Cloud runs on.
+# From any host: `cargo build --release --target aarch64-unknown-linux-musl`
+#            and `cargo build --release --target x86_64-unknown-linux-musl`
+[target.x86_64-unknown-linux-musl]
+linker = "rust-lld"
+rustflags = ["-C", "target-feature=+crt-static"]
+
+[target.aarch64-unknown-linux-musl]
+linker = "rust-lld"
+rustflags = ["-C", "target-feature=+crt-static"]
