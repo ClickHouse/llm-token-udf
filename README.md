@@ -18,7 +18,7 @@ llm-token-udf/
 │   └── 05_queries.sql     # cost attribution, caching savings, context bloat, ProfileEvents, ...
 ├── terraform/
 │   └── main.tf            # clickhouse_udf + dev (follows latest) / prod (pinned) attachments
-└── local/                 # XML function config + wrapper for running against OSS ClickHouse
+└── local/                 # XML function config for running the same UDFs against OSS ClickHouse
 ```
 
 ## count_tokens (Native runtime, Rust)
@@ -65,8 +65,13 @@ as in `sql/05_queries.sql`.
 
 Everything here also runs against open-source ClickHouse via an XML function config, which is how
 the numbers in the post were produced. `local/udf_functions.xml` has the function definitions and
-the steps; `local/count_tokens.sh` is the wrapper that gives the binary a working directory with
-`models.json` in it.
+the steps.
+
+One thing worth knowing if you adapt the binaries: data files in the zip are deployed next to the
+binary, but the process does not start in that directory (in Cloud the bundle is under `/scripts`
+and the working directory is `/`). Both `count_tokens` implementations resolve `models.json`
+relative to the executable for that reason, and exit with an error if it is missing rather than
+silently falling back.
 
 ## Prebuilt binaries
 

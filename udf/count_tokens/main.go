@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -26,9 +27,8 @@ import (
 	"github.com/tiktoken-go/tokenizer"
 )
 
-// models.json ships next to the binary in the zip and is available in the
-// working directory at runtime. It lets you map new model names to an
-// encoding without recompiling.
+// models.json ships next to the binary in the zip. It lets you map new model
+// names to an encoding without recompiling.
 type modelRule struct {
 	Prefix   string `json:"prefix"`
 	Encoding string `json:"encoding"`
@@ -42,13 +42,28 @@ var (
 	defaultEncoding = tokenizer.O200kBase
 )
 
-func loadRules() {
-	data, err := os.ReadFile("models.json")
+// dataFile resolves a bundled data file relative to the executable. The sandbox
+// does not start the process in the bundle directory (the working directory is
+// `/`, the bundle is under `/scripts`), so a cwd-relative read fails.
+func dataFile(name string) string {
+	exe, err := os.Executable()
 	if err != nil {
-		return // optional file
+		exe = os.Args[0]
+	}
+	return filepath.Join(filepath.Dir(exe), name)
+}
+
+func loadRules() {
+	path := dataFile("models.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		// Fail loudly: the zip always contains models.json, so a missing file
+		// means the deployment is wrong, not that there are no rules.
+		fmt.Fprintf(os.Stderr, "count_tokens: cannot read %s: %v\n", path, err)
+		os.Exit(1)
 	}
 	if err := json.Unmarshal(data, &rules); err != nil {
-		fmt.Fprintf(os.Stderr, "count_tokens: bad models.json: %v\n", err)
+		fmt.Fprintf(os.Stderr, "count_tokens: bad %s: %v\n", path, err)
 		os.Exit(1)
 	}
 	// Longest prefix wins.

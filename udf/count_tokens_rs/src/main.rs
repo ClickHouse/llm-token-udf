@@ -12,18 +12,31 @@
 //!   4. Repeat until stdin closes. The process is long-lived (pool).
 use std::collections::HashMap;
 use std::io::{self, BufRead, BufReader, BufWriter, Read, Write};
+use std::path::PathBuf;
 use std::process;
 
 use serde::Deserialize;
 use tiktoken_rs::{cl100k_base, o200k_base, CoreBPE};
 
-/// models.json ships next to the binary in the zip and is available in the
-/// working directory at runtime. It lets you map new model names to an
-/// encoding without recompiling.
+/// models.json ships next to the binary in the zip. It lets you map new model
+/// names to an encoding without recompiling.
 #[derive(Deserialize)]
 struct ModelRule {
     prefix: String,
     encoding: String,
+}
+
+/// Data files are deployed next to the binary, but the sandbox does not start
+/// the process in that directory (the working directory is `/`, the bundle is
+/// under `/scripts`), so resolve paths relative to the executable, never to cwd.
+fn data_file(name: &str) -> PathBuf {
+    let exe = std::env::current_exe()
+        .ok()
+        .or_else(|| std::env::args().next().map(PathBuf::from));
+    match exe.as_deref().and_then(|p| p.parent()) {
+        Some(dir) if !dir.as_os_str().is_empty() => dir.join(name),
+        _ => PathBuf::from(name),
+    }
 }
 
 struct Tokenizers {
@@ -33,10 +46,13 @@ struct Tokenizers {
 
 impl Tokenizers {
     fn load() -> Self {
-        let mut rules: Vec<ModelRule> = std::fs::read_to_string("models.json")
-            .ok()
-            .map(|s| serde_json::from_str(&s).unwrap_or_else(|e| die(&format!("bad models.json: {e}"))))
-            .unwrap_or_default();
+        let path = data_file("models.json");
+        // Fail loudly: the zip always contains models.json, so a missing file
+        // means the deployment is wrong, not that there are no rules.
+        let raw = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| die(&format!("cannot read {}: {e}", path.display())));
+        let mut rules: Vec<ModelRule> =
+            serde_json::from_str(&raw).unwrap_or_else(|e| die(&format!("bad {}: {e}", path.display())));
         rules.sort_by_key(|r| std::cmp::Reverse(r.prefix.len())); // longest prefix wins
         Self { rules, encoders: HashMap::new() }
     }
@@ -88,7 +104,7 @@ fn read_string(r: &mut impl Read, buf: &mut Vec<u8>) -> io::Result<()> {
 }
 
 fn main() {
-    let mut tok = Tokenizers::load(); // reads models.json from the working dir
+    let mut tok = Tokenizers::load(); // reads models.json from the binary's directory
     let mut stdin = BufReader::with_capacity(1 << 20, io::stdin().lock());
     let mut stdout = BufWriter::with_capacity(1 << 20, io::stdout().lock());
     let (mut header, mut model, mut text) = (String::new(), Vec::new(), Vec::new());

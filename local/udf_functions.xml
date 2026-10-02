@@ -7,8 +7,9 @@
 
   and populate local/user_scripts/ with:
     count_tokens_main      the Rust binary for your architecture (see udf/count_tokens_rs/build.sh)
-    models.json            copied from udf/count_tokens_rs/
-    count_tokens.sh        the wrapper in this directory (cd to the script dir so models.json is in cwd)
+    models.json            copied from udf/count_tokens_rs/ (the binary looks for it next to itself,
+                           not in the working directory - same as in Cloud, where the bundle lives
+                           under /scripts but the process starts in /)
     count_tokens_py.py     udf/count_tokens_py/main.py   (needs `pip install tiktoken`)
     judge_response.py      udf/judge_response/main.py    (needs `pip install requests`; set ANTHROPIC_API_KEY in the server's environment)
 
@@ -24,7 +25,7 @@
         <format>RowBinary</format>
         <send_chunk_header>true</send_chunk_header>
         <pool_size>4</pool_size>
-        <command>count_tokens.sh</command>
+        <command>count_tokens_main</command>
         <deterministic>true</deterministic>
     </function>
     <function>
